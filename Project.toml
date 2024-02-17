@@ -1,0 +1,13 @@
+name = "Overlay"
+uuid = "430cd348-83e4-4908-aa6c-6f0a00015c86"
+authors = ["Andrew Young"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
