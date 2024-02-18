@@ -3,6 +3,14 @@ uuid = "430cd348-83e4-4908-aa6c-6f0a00015c86"
 authors = ["Andrew Young"]
 version = "1.0.0-DEV"
 
+[deps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
+
 [compat]
 julia = "1"
 
