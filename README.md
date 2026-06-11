@@ -69,7 +69,7 @@ using GLMakie
 using Overlay
 
 fig = Figure()
-ax = Axis(fig[1, 1]; aspect = DataAspect())
+ax = Axis(fig[1, 1])  # plot_calibrated_image! sets aspect = transformed limits (Tx/Ty), not DataAspect
 plot_calibrated_image!(ax, img, cal)  # sets xscale/yscale to log10 when cal.x_log / cal.y_log
 scatter!(ax, xs, ys)  # your overlay in the same data coordinates
 fig

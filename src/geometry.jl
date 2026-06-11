@@ -10,6 +10,28 @@ function _data_to_tf(d::Float64, log_axis::Bool)
     return d
 end
 
+"""
+    transformed_extent_aspect(cal::ImageCalibration, xlo, xhi, ylo, yhi) -> Float64
+
+Return `Tx / Ty`, the width-to-height ratio of the axis limits in the **same transformed
+coordinates** Makie uses for the 2D axis camera (`log10` span when an axis is log, linear
+span otherwise).
+
+Use this with `AxisAspect(...)` when plotting so the layout viewport matches the camera’s
+orthographic bounds; using only the pixel count ratio `ncols/nrows` can stretch the figure
+when `Tx/Ty` differs from that ratio (often visible as a slight vertical or horizontal skew).
+"""
+function transformed_extent_aspect(cal::ImageCalibration, xlo, xhi, ylo, yhi)
+    tx0 = _data_to_tf(Float64(xlo), cal.x_log)
+    tx1 = _data_to_tf(Float64(xhi), cal.x_log)
+    ty0 = _data_to_tf(Float64(ylo), cal.y_log)
+    ty1 = _data_to_tf(Float64(yhi), cal.y_log)
+    Tx = abs(tx1 - tx0)
+    Ty = abs(ty1 - ty0)
+    Ty > 0 || throw(ArgumentError("degenerate y-axis extent after transform (Ty = 0)"))
+    return Tx / Ty
+end
+
 function _linear_range_from_clicks(px0::Real, px1::Real, t0::Real, t1::Real, n::Int)
     if px1 ≈ px0
         throw(ArgumentError("calibration: pixel positions are too close ($(px0), $(px1))"))

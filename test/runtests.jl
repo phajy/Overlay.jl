@@ -1,5 +1,21 @@
 using Overlay
+using Images
 using Test
+
+@testset "rotr90 display: x_scale ↔ columns, y_scale ↔ rows (no x/y swap)" begin
+    # Extreme aspect ratio so a transpose bug would be obvious.
+    img = zeros(Float32, 17, 300)
+    cal = calibration_from_clicks(;
+        img_size = size(img),
+        x_pixels = (0.0, 16.0),
+        x_values = (0.0, 1.0),
+        y_pixels = (0.0, 299.0),
+        y_values = (0.0, 1.0),
+    )
+    mat = rotr90(img)
+    @test size(mat, 2) == length(cal.x_scale) == cal.img_width
+    @test size(mat, 1) == length(cal.y_scale) == cal.img_height
+end
 
 @testset "calibration_from_clicks + pixel transforms (linear)" begin
     cal = calibration_from_clicks(;
@@ -33,6 +49,31 @@ using Test
 
     @test length(x_data_coords(cal)) == 100
     @test x_data_coords(cal)[1] ≈ first(cal.x_scale)
+end
+
+@testset "transformed_extent_aspect matches Makie camera spans" begin
+    cal = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (0.0, 99.0),
+        x_values = (1.0, 100.0),
+        y_pixels = (0.0, 49.0),
+        y_values = (1.0, 5.0),
+        x_log = true,
+        y_log = false,
+    )
+    ar = transformed_extent_aspect(cal, 1.0, 100.0, 1.0, 5.0)
+    @test ar ≈ (log10(100) - log10(1.0)) / (5.0 - 1.0) rtol = 1e-12
+    cal2 = calibration_from_clicks(;
+        img_size = (30, 40),
+        x_pixels = (0.0, 29.0),
+        x_values = (1.0, 10.0),
+        y_pixels = (0.0, 39.0),
+        y_values = (1.0, 100.0),
+        x_log = true,
+        y_log = true,
+    )
+    ar2 = transformed_extent_aspect(cal2, 1.0, 10.0, 1.0, 100.0)
+    @test ar2 ≈ (log10(10) - log10(1.0)) / (log10(100) - log10(1.0)) rtol = 1e-12
 end
 
 @testset "log10 x-axis calibration" begin
