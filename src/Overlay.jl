@@ -1,12 +1,27 @@
 module Overlay
 
-using TestImages
+using Serialization
 using Images
-using GLMakie, Makie
+using GLMakie
+using Makie
 
-# Write your package code here.
-export greet_overlay
+include("types.jl")
+include("geometry.jl")
+include("io.jl")
+include("interactive.jl")
+include("makie_plot.jl")
+
+export ImageCalibration
+export calibration_from_clicks
 export calibrate_image
-include("functions.jl")
+export x_data_coords
+export y_data_coords
+export pixel_to_data
+export pixel_to_data_continuous
+export data_to_pixel
+export data_to_pixel_continuous
+export save_calibration
+export load_calibration
+export plot_calibrated_image!
 
 end
