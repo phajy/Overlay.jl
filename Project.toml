@@ -1,7 +1,7 @@
 name = "Overlay"
 uuid = "430cd348-83e4-4908-aa6c-6f0a00015c86"
 authors = ["Andrew Young"]
-version = "1.0.1-DEV"
+version = "1.0.1"
 
 [deps]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
