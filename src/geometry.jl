@@ -43,13 +43,26 @@ function _linear_range_from_clicks(px0::Real, px1::Real, t0::Real, t1::Real, n::
 end
 
 """
-    calibration_from_clicks(; img_size, x_pixels, x_values, y_pixels, y_values, x_log=false, y_log=false)
+    calibration_from_clicks(;
+        img_size, x_pixels, x_values, y_pixels, y_values,
+        x_log = false, y_log = false,
+        x_click_py = nothing, y_click_px = nothing,
+    )
 
 Build an [`ImageCalibration`](@ref) from two known **x** and two known **y** positions in **pixel space**.
 
 # Keyword arguments
 - `x_log`, `y_log`: if `true`, that axis is **log10** in the figure (pixel position is affine in
   `log10(data)`). Calibration values must be **positive** for a log axis.
+- `x_click_py`: optional `(ypx₁, ypx₂)` — raw-image **continuous** y-pixel coordinates at the two
+  **x** calibration clicks (same convention as [`pixel_to_data_continuous`](@ref), typically in
+  `[0, img_height]`).
+- `y_click_px`: optional `(xpx₁, xpx₂)` — raw-image **continuous** x-pixel coordinates at the two
+  **y** calibration clicks (typically in `[0, img_width]`).
+
+When both are provided, `click_markers` on the returned [`ImageCalibration`](@ref) stores four
+`(x, y)` data-space points for overlays (e.g. [`plot_calibrated_image!`](@ref) with
+`mark_calibration_points=true`).
 
 Transform space along each index is linear: for a log axis, `x_scale[i]` is `log10` of the data
 `x` at column `i`; use [`pixel_to_data`](@ref) or [`x_data_coords`](@ref) for data-space values.
@@ -64,6 +77,8 @@ function calibration_from_clicks(;
     y_values::Tuple{Real,Real},
     x_log::Bool = false,
     y_log::Bool = false,
+    x_click_py::Union{Nothing, Tuple{Real, Real}} = nothing,
+    y_click_px::Union{Nothing, Tuple{Real, Real}} = nothing,
 )
     img_w, img_h = img_size
     x0_px, x1_px = x_pixels
@@ -79,7 +94,49 @@ function calibration_from_clicks(;
     x_scale = _linear_range_from_clicks(x0_px, x1_px, xt0, xt1, img_w)
     y_scale = _linear_range_from_clicks(y0_px, y1_px, yt0, yt1, img_h)
     ar = Float64(img_h) / Float64(img_w)
-    return ImageCalibration(x_scale, y_scale, x_log, y_log, ar, img_w, img_h)
+    markers = _click_markers_data_xy(
+        x_scale,
+        y_scale,
+        x_log,
+        y_log,
+        ar,
+        img_w,
+        img_h,
+        x_pixels,
+        y_pixels,
+        x_click_py,
+        y_click_px,
+    )
+    return ImageCalibration(x_scale, y_scale, x_log, y_log, ar, img_w, img_h, markers)
+end
+
+function _click_markers_data_xy(
+    x_scale,
+    y_scale,
+    x_log::Bool,
+    y_log::Bool,
+    ar::Float64,
+    img_w::Int,
+    img_h::Int,
+    x_pixels::Tuple{Real, Real},
+    y_pixels::Tuple{Real, Real},
+    x_click_py,
+    y_click_px,
+)
+    if x_click_py === nothing || y_click_px === nothing
+        return nothing
+    end
+    cal0 = ImageCalibration(x_scale, y_scale, x_log, y_log, ar, img_w, img_h, nothing)
+    xpx0, xpx1 = Float64(x_pixels[1]), Float64(x_pixels[2])
+    ypx0, ypx1 = Float64(y_pixels[1]), Float64(y_pixels[2])
+    y_at_x0, y_at_x1 = Float64(x_click_py[1]), Float64(x_click_py[2])
+    x_at_y0, x_at_y1 = Float64(y_click_px[1]), Float64(y_click_px[2])
+    return (
+        pixel_to_data_continuous(cal0, xpx0, y_at_x0),
+        pixel_to_data_continuous(cal0, xpx1, y_at_x1),
+        pixel_to_data_continuous(cal0, x_at_y0, ypx0),
+        pixel_to_data_continuous(cal0, x_at_y1, ypx1),
+    )
 end
 
 """

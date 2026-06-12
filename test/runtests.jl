@@ -122,6 +122,60 @@ end
         @test cal2.y_log == cal.y_log
         @test collect(cal2.x_scale) == collect(cal.x_scale)
         @test collect(cal2.y_scale) == collect(cal.y_scale)
+        @test cal2.click_markers === cal.click_markers === nothing
+    finally
+        isfile(path) && rm(path)
+    end
+end
+
+@testset "click_markers (calibration_from_clicks)" begin
+    cal = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (10.0, 90.0),
+        x_values = (0.0, 10.0),
+        y_pixels = (5.0, 45.0),
+        y_values = (1.0, 5.0),
+        x_click_py = (12.0, 40.0),
+        y_click_px = (20.0, 80.0),
+    )
+    @test cal.click_markers !== nothing
+    m = cal.click_markers::NTuple{4, Tuple{Float64, Float64}}
+    x1, y1 = pixel_to_data_continuous(cal, 10.0, 12.0)
+    @test m[1][1] ≈ x1 && m[1][2] ≈ y1
+    x2, y2 = pixel_to_data_continuous(cal, 90.0, 40.0)
+    @test m[2][1] ≈ x2 && m[2][2] ≈ y2
+    x3, y3 = pixel_to_data_continuous(cal, 20.0, 5.0)
+    @test m[3][1] ≈ x3 && m[3][2] ≈ y3
+    x4, y4 = pixel_to_data_continuous(cal, 80.0, 45.0)
+    @test m[4][1] ≈ x4 && m[4][2] ≈ y4
+
+    cal_one = calibration_from_clicks(;
+        img_size = (10, 10),
+        x_pixels = (0.0, 9.0),
+        x_values = (0.0, 1.0),
+        y_pixels = (0.0, 9.0),
+        y_values = (0.0, 1.0),
+        x_click_py = (1.0, 2.0),
+    )
+    @test cal_one.click_markers === nothing
+end
+
+@testset "save_calibration preserves click_markers" begin
+    cal = calibration_from_clicks(;
+        img_size = (30, 20),
+        x_pixels = (1.0, 28.0),
+        x_values = (0.0, 2.0),
+        y_pixels = (2.0, 18.0),
+        y_values = (0.0, 1.0),
+        x_click_py = (5.0, 10.0),
+        y_click_px = (8.0, 20.0),
+    )
+    @test cal.click_markers !== nothing
+    path = joinpath(@__DIR__, "tmp_calibration_markers.overlayjl")
+    try
+        save_calibration(path, cal)
+        cal2 = load_calibration(path)
+        @test cal2.click_markers == cal.click_markers
     finally
         isfile(path) && rm(path)
     end
