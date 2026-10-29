@@ -1,19 +1,21 @@
 name = "Overlay"
 uuid = "430cd348-83e4-4908-aa6c-6f0a00015c86"
 authors = ["Andrew Young"]
-version = "1.0.1"
+version = "1.1.0"
 
 [deps]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-GLMakie = "0.9, 0.10, 0.11"
+GLMakie = "0.9, 0.10, 0.11, 0.12, 0.13"
 Images = "0.25, 0.26, 0.27"
-Makie = "0.20, 0.21, 0.22"
+Makie = "0.20, 0.21, 0.22, 0.23, 0.24"
 Serialization = "1"
+TOML = "1"
 julia = "1.10"
 
 [extras]
