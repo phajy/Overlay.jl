@@ -4,16 +4,26 @@
 
 **Overlay.jl** helps you **over-plot your own data** on a figure from the literature (PNG, JPEG, a rasterized PDF page, etc.). Typical workflow: load the image, run an interactive calibration once, save the calibration, then plot the image in data coordinates and overlay curves or scatter (for example with **Makie** or **Plots.jl**).
 
-**Julia** ≥ 1.10 is required. Current release target: **1.1.0**.
+**Julia** ≥ 1.10 is required. Current release: **1.1.0**.
 
 ## Install
+
+Add the Bristol [AstroRegistry](https://github.com/astro-group-bristol/AstroRegistry) once (if you have not already), then add the package:
+
+```julia
+using Pkg
+Pkg.Registry.add("https://github.com/astro-group-bristol/AstroRegistry")
+Pkg.add("Overlay")
+```
+
+Alternatively, install directly from GitHub without the registry:
 
 ```julia
 using Pkg
 Pkg.add(url = "https://github.com/phajy/Overlay.jl")
 ```
 
-The package is not yet in the General registry or [AstroRegistry](https://github.com/astro-group-bristol/AstroRegistry); install from the GitHub URL above.
+Overlay.jl is not in the General registry.
 
 ## Interactive calibration
 
