@@ -104,7 +104,32 @@ end
     @test x_data_coords(cal)[1] ≈ exp10(first(cal.x_scale))
 end
 
-@testset "save_calibration / load_calibration" begin
+@testset "save_calibration / load_calibration (TOML default)" begin
+    cal = calibration_from_clicks(;
+        img_size = (20, 10),
+        x_pixels = (0.0, 19.0),
+        x_values = (-1.0, 1.0),
+        y_pixels = (2.0, 8.0),
+        y_values = (0.0, 3.0),
+    )
+    path = joinpath(@__DIR__, "tmp_calibration.toml")
+    try
+        save_calibration(path, cal)
+        cal2 = load_calibration(path)
+        @test cal2.img_width == cal.img_width
+        @test cal2.img_height == cal.img_height
+        @test cal2.x_log == cal.x_log
+        @test cal2.y_log == cal.y_log
+        @test collect(cal2.x_scale) ≈ collect(cal.x_scale)
+        @test collect(cal2.y_scale) ≈ collect(cal.y_scale)
+        @test cal2.click_markers === cal.click_markers === nothing
+        @test occursin("Overlay.jl.calibration", read(path, String))
+    finally
+        isfile(path) && rm(path)
+    end
+end
+
+@testset "save_calibration / load_calibration (Serialization legacy)" begin
     cal = calibration_from_clicks(;
         img_size = (20, 10),
         x_pixels = (0.0, 19.0),
@@ -114,15 +139,12 @@ end
     )
     path = joinpath(@__DIR__, "tmp_calibration.overlayjl")
     try
-        save_calibration(path, cal)
+        save_calibration(path, cal; format = :serialize)
         cal2 = load_calibration(path)
         @test cal2.img_width == cal.img_width
-        @test cal2.img_height == cal.img_height
-        @test cal2.x_log == cal.x_log
-        @test cal2.y_log == cal.y_log
         @test collect(cal2.x_scale) == collect(cal.x_scale)
         @test collect(cal2.y_scale) == collect(cal.y_scale)
-        @test cal2.click_markers === cal.click_markers === nothing
+        @test cal2.click_markers === nothing
     finally
         isfile(path) && rm(path)
     end
@@ -160,25 +182,45 @@ end
     @test cal_one.click_markers === nothing
 end
 
-@testset "save_calibration preserves click_markers" begin
+@testset "TOML save/load preserves click_markers and log axes" begin
     cal = calibration_from_clicks(;
         img_size = (30, 20),
         x_pixels = (1.0, 28.0),
-        x_values = (0.0, 2.0),
+        x_values = (1.0, 100.0),
         y_pixels = (2.0, 18.0),
-        y_values = (0.0, 1.0),
+        y_values = (0.1, 10.0),
+        x_log = true,
+        y_log = true,
         x_click_py = (5.0, 10.0),
         y_click_px = (8.0, 20.0),
     )
     @test cal.click_markers !== nothing
-    path = joinpath(@__DIR__, "tmp_calibration_markers.overlayjl")
+    path = joinpath(@__DIR__, "tmp_calibration_markers.toml")
     try
         save_calibration(path, cal)
         cal2 = load_calibration(path)
-        @test cal2.click_markers == cal.click_markers
+        @test cal2.x_log && cal2.y_log
+        @test collect(cal2.x_scale) ≈ collect(cal.x_scale)
+        @test collect(cal2.y_scale) ≈ collect(cal.y_scale)
+        @test length(cal2.click_markers) == 4
+        for i in 1:4
+            @test cal2.click_markers[i][1] ≈ cal.click_markers[i][1]
+            @test cal2.click_markers[i][2] ≈ cal.click_markers[i][2]
+        end
     finally
         isfile(path) && rm(path)
     end
+end
+
+@testset "save_calibration rejects unknown format" begin
+    cal = calibration_from_clicks(;
+        img_size = (10, 10),
+        x_pixels = (0.0, 9.0),
+        x_values = (0.0, 1.0),
+        y_pixels = (0.0, 9.0),
+        y_values = (0.0, 1.0),
+    )
+    @test_throws ArgumentError save_calibration(tempname(), cal; format = :json)
 end
 
 @testset "calibration_from_clicks errors (pixels)" begin

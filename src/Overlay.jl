@@ -1,6 +1,7 @@
 module Overlay
 
 using Serialization
+using TOML
 using Images
 using GLMakie
 using Makie

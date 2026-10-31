@@ -17,7 +17,7 @@ Result of calibrating a raster image to data coordinates.
 
 Use `pixel_to_data` / `data_to_pixel` for coordinates in **data** space,
 `x_data_coords` / `y_data_coords` for vectors aligned to pixels for plotting,
-`save_calibration` / `load_calibration` to persist.
+`save_calibration` / `load_calibration` to persist (TOML by default; see I/O docs).
 """
 struct ImageCalibration{Rx<:AbstractRange,Ry<:AbstractRange}
     x_scale::Rx
