@@ -22,6 +22,9 @@ export pixel_to_data_continuous
 export data_to_pixel
 export data_to_pixel_continuous
 export transformed_extent_aspect
+export data_extents
+export calibrated_heatmap_data
+export calibrated_plot_attrs
 export save_calibration
 export load_calibration
 export plot_calibrated_image!

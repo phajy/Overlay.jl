@@ -255,3 +255,98 @@ end
     )
     @test_throws ArgumentError data_to_pixel(cal, -1.0, 1.0)
 end
+
+@testset "data_extents" begin
+    cal = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (0.0, 99.0),
+        x_values = (0.0, 10.0),
+        y_pixels = (0.0, 49.0),
+        y_values = (0.0, 1.0),
+    )
+    (xlo, xhi), (ylo, yhi) = data_extents(cal)
+    @test xlo ≈ first(x_data_coords(cal))
+    @test xhi ≈ last(x_data_coords(cal))
+    @test ylo ≈ first(y_data_coords(cal))
+    @test yhi ≈ last(y_data_coords(cal))
+
+    cal_log = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (0.0, 99.0),
+        x_values = (1.0, 100.0),
+        y_pixels = (0.0, 49.0),
+        y_values = (0.1, 10.0),
+        x_log = true,
+        y_log = true,
+    )
+    (xlo2, xhi2), (ylo2, yhi2) = data_extents(cal_log)
+    # Extents are extrapolated to full image edges, not the click values.
+    @test xlo2 ≈ first(x_data_coords(cal_log))
+    @test xhi2 ≈ last(x_data_coords(cal_log))
+    @test ylo2 ≈ first(y_data_coords(cal_log))
+    @test yhi2 ≈ last(y_data_coords(cal_log))
+    @test xlo2 ≤ 1.0 ≤ xhi2
+    @test ylo2 ≤ 0.1 ≤ yhi2
+end
+
+@testset "calibrated_plot_attrs" begin
+    cal = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (0.0, 99.0),
+        x_values = (0.0, 10.0),
+        y_pixels = (0.0, 49.0),
+        y_values = (0.0, 1.0),
+    )
+    attrs = calibrated_plot_attrs(cal)
+    (xlo, xhi), (ylo, yhi) = data_extents(cal)
+    @test attrs.xlims == (xlo, xhi)
+    @test attrs.ylims == (ylo, yhi)
+    @test attrs.xscale === :identity
+    @test attrs.yscale === :identity
+    @test attrs.widen === false
+    # Displayed (rotr90) grid: W_vis = img_height, H_vis = img_width
+    Tx_Ty = transformed_extent_aspect(cal, xlo, xhi, ylo, yhi)
+    @test attrs.aspect_ratio ≈ Tx_Ty * (cal.img_width / cal.img_height)
+
+    cal_log = calibration_from_clicks(;
+        img_size = (100, 50),
+        x_pixels = (0.0, 99.0),
+        x_values = (1.0, 100.0),
+        y_pixels = (0.0, 49.0),
+        y_values = (0.1, 10.0),
+        x_log = true,
+        y_log = true,
+    )
+    attrs_log = calibrated_plot_attrs(cal_log)
+    @test attrs_log.xscale === :log10
+    @test attrs_log.yscale === :log10
+end
+
+@testset "calibrated_heatmap_data orientation matches Makie rotr90" begin
+    # Images-style array: dim1 = visual rows (top→bottom), dim2 = visual cols (left→right).
+    H, W = 6, 10
+    img = [RGB{Float32}(i / H, j / W, 0) for i in 1:H, j in 1:W]
+    img[1, 1] = RGB{Float32}(1, 0, 0)       # visual TL
+    img[1, W] = RGB{Float32}(0, 1, 0)       # visual TR
+    img[H, 1] = RGB{Float32}(0, 0, 1)       # visual BL
+    img[H, W] = RGB{Float32}(1, 1, 0)       # visual BR
+
+    cal = calibration_from_clicks(;
+        img_size = size(img),
+        x_pixels = (0.0, Float64(H - 1)),
+        x_values = (0.0, 10.0),
+        y_pixels = (0.0, Float64(W - 1)),
+        y_values = (0.0, 1.0),
+    )
+    xs, ys, z = calibrated_heatmap_data(img, cal)
+    @test size(z) == (length(ys), length(xs))
+    @test size(z) == size(permutedims(rotr90(img)))
+    # Plots: row 1 = bottom when yflip=false → BL, BR, TL, TR
+    @test z[1, 1] == img[H, 1]          # BL blue
+    @test z[1, end] == img[H, W]        # BR yellow
+    @test z[end, 1] == img[1, 1]        # TL red
+    @test z[end, end] == img[1, W]      # TR green
+    @test first(xs) ≈ first(data_extents(cal)[1])
+    @test last(xs) ≈ last(data_extents(cal)[1])
+    @test_throws ArgumentError calibrated_heatmap_data(zeros(RGB{Float32}, 2, 2), cal)
+end

@@ -4,7 +4,7 @@
 
 **Overlay.jl** helps you **over-plot your own data** on a figure from the literature (PNG, JPEG, a rasterized PDF page, etc.). Typical workflow: load the image, run an interactive calibration once, save the calibration, then plot the image in data coordinates and overlay curves or scatter (for example with **Makie** or **Plots.jl**).
 
-**Julia** ≥ 1.10 is required. Current release: **1.1.0**.
+**Julia** ≥ 1.10 is required. Current release: **1.2.0**.
 
 ## Install
 
@@ -89,20 +89,17 @@ fig
 
 ### Plots.jl
 
-The calibration window displays `rotr90(img)` for convenience. Match that orientation and set axis scales when needed:
+Use `calibrated_heatmap_data` (not `reverse(rotr90(img), dims=1)` with `x_data_coords`) so the image stays upright and agrees with Makie / the calibration window. Splat `calibrated_plot_attrs` for tight limits and **square pixels**:
 
 ```julia
 using Plots
 
-xs = x_data_coords(cal)
-ys = y_data_coords(cal)
-plot(xs, ys, reverse(rotr90(img), dims = 1); yflip = false, aspect_ratio = :equal,
-     xscale = cal.x_log ? :log10 : :identity,
-     yscale = cal.y_log ? :log10 : :identity)
+xs, ys, z = calibrated_heatmap_data(img, cal)
+plot(xs, ys, z; yflip = false, calibrated_plot_attrs(cal)...)
 plot!(1.5 .* rand(10), rand(10); seriestype = :scatter)
 ```
 
-`aspect_ratio = cal.aspect_ratio` is the image’s **pixel** height/width ratio; for many overlays, `aspect_ratio = :equal` (equal data units) is easier to reason about.
+`calibrated_heatmap_data` accounts for Plots’ `(y, x)` matrix layout vs Makie `image!`’s `(x, y)` layout after `rotr90`. Do **not** use `aspect_ratio = :equal`: that equalizes *data* units, so a spectrum with *x* ≫ *y* becomes a thin ribbon. Empty margins around the *plot box* in a square window are normal once the box matches the image shape—pass `size = (...)` if you want less chrome. For Makie, prefer `plot_calibrated_image!`.
 
 ### Coordinate helpers
 
@@ -110,6 +107,9 @@ plot!(1.5 .* rand(10), rand(10); seriestype = :scatter)
 - `pixel_to_data_continuous(cal, px, py)` — same, with `px`, `py` in `[0, img_width]` × `[0, img_height]`.
 - `data_to_pixel` / `data_to_pixel_continuous` — inverses (log axes require positive coordinates).
 - `x_data_coords` / `y_data_coords` — data-space vectors along each image dimension.
+- `data_extents(cal)` — `((xlo, xhi), (ylo, yhi))` calibrated image limits (for `xlims` / `ylims`).
+- `calibrated_heatmap_data(img, cal)` — `xs, ys, z` for Plots, upright and aligned with Makie.
+- `calibrated_plot_attrs(cal)` — Plots.jl kwargs: tight limits, square-pixel `aspect_ratio`, scales.
 
 ## Saving and reloading calibration
 
@@ -147,6 +147,9 @@ Overlay.jl does not rasterize PDFs. Export a page to PNG (or use another Julia p
 | `pixel_to_data`, `data_to_pixel` | Index ↔ data coordinates |
 | `pixel_to_data_continuous`, `data_to_pixel_continuous` | Continuous pixel frame ↔ data |
 | `save_calibration`, `load_calibration` | Persist / restore (TOML default; Serialization optional) |
+| `data_extents(cal)` | `((xlo, xhi), (ylo, yhi))` for Plots `xlims` / `ylims` |
+| `calibrated_heatmap_data(img, cal)` | `xs, ys, z` for Plots (upright, Makie-aligned) |
+| `calibrated_plot_attrs(cal)` | Plots kwargs: tight limits, square-pixel aspect, scales |
 | `plot_calibrated_image!(ax, img, cal; mark_calibration_points=false)` | Makie background image + optional click markers |
 | `transformed_extent_aspect` | `Tx/Ty` for Makie `AxisAspect` on log/linear extents |
 
