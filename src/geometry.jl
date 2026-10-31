@@ -235,3 +235,97 @@ function data_to_pixel_continuous(cal::ImageCalibration, x::Real, y::Real)
     py = h <= 1 ? 0.0 : (j - 1) * h / (h - 1)
     return (px, py)
 end
+
+function _extent_lo_hi(cal, is_x::Bool)
+    r = is_x ? cal.x_scale : cal.y_scale
+    logf = is_x ? cal.x_log : cal.y_log
+    lo = logf ? exp10(float(first(r))) : float(first(r))
+    hi = logf ? exp10(float(last(r))) : float(last(r))
+    lo, hi = minmax(lo, hi)
+    if logf
+        # log axes require strictly positive limits; exp10 can underflow to 0.0
+        lo = max(lo, nextfloat(0.0))
+        hi = max(hi, nextfloat(0.0))
+        if hi <= lo
+            hi = lo * 10
+        end
+    end
+    return lo, hi
+end
+
+"""
+    data_extents(cal::ImageCalibration) -> ((xlo, xhi), (ylo, yhi))
+
+Data-space axis limits covering the calibrated image (same extents used by
+[`plot_calibrated_image!`](@ref)). Useful with Plots.jl as `xlims` / `ylims`.
+"""
+function data_extents(cal::ImageCalibration)
+    return (_extent_lo_hi(cal, true), _extent_lo_hi(cal, false))
+end
+
+"""
+    calibrated_heatmap_data(img, cal::ImageCalibration) -> xs, ys, z
+
+Build `xs`, `ys`, and image matrix `z` for Plots.jl `plot(xs, ys, z; ...)` /
+`heatmap`, with the **same upright orientation** as [`plot_calibrated_image!`](@ref).
+
+Makie `image!` maps array dim 1 → *x* and dim 2 → *y*, so calibration uses
+`rotr90(img)`. Plots heatmaps use dim 1 → *y* and dim 2 → *x*. Combining
+`reverse(rotr90(img), dims=1)` with `x_data_coords` / `y_data_coords` therefore
+looks rotated 90°. This helper returns `permutedims(rotr90(img))` and matching
+`range`s from [`data_extents`](@ref) (lengths follow the displayed pixel grid,
+not `length(x_data_coords)` / `length(y_data_coords)`).
+
+`size(img)` must equal `(cal.img_width, cal.img_height)`.
+"""
+function calibrated_heatmap_data(img, cal::ImageCalibration)
+    size(img) == (cal.img_width, cal.img_height) || throw(
+        ArgumentError(
+            "img size $(size(img)) does not match calibration $(cal.img_width)×$(cal.img_height)",
+        ),
+    )
+    (xlo, xhi), (ylo, yhi) = data_extents(cal)
+    z = permutedims(rotr90(img))
+    ny, nx = size(z)
+    xs = range(Float64(xlo), Float64(xhi); length = nx)
+    ys = range(Float64(ylo), Float64(yhi); length = ny)
+    return xs, ys, z
+end
+
+"""
+    calibrated_plot_attrs(cal::ImageCalibration) -> NamedTuple
+
+Keyword arguments for plotting a calibrated image in **Plots.jl** with **square
+pixels** and axes tight to the image:
+
+- `xlims` / `ylims` — from [`data_extents`](@ref)
+- `aspect_ratio` — Plots’ numeric ratio so one displayed pixel is square on screen
+  (not `:equal`, which equalizes *data* units and squashes spectra)
+- `xscale` / `yscale` — `:log10` or `:identity` from the calibration
+- `widen = false` — keep limits flush with the image (Plots otherwise pads ~5%)
+
+# Example
+```julia
+xs, ys, z = calibrated_heatmap_data(img, cal)
+plot(xs, ys, z; yflip = false, calibrated_plot_attrs(cal)...)
+```
+
+Overlay does not depend on Plots; splat these into `plot` / `heatmap` yourself.
+Makie users should prefer [`plot_calibrated_image!`](@ref).
+"""
+function calibrated_plot_attrs(cal::ImageCalibration)
+    (xlo, xhi), (ylo, yhi) = data_extents(cal)
+    # Plots: 1 y-unit is drawn the same size as `aspect_ratio` x-units.
+    # Displayed grid (rotr90) has visual width = img_height, height = img_width.
+    # Square pixels ⇒ aspect_ratio = (Tx/W_vis)/(Ty/H_vis) = (Tx/Ty)*(H_vis/W_vis)
+    #   = (Tx/Ty)*(img_width/img_height).
+    ar = transformed_extent_aspect(cal, xlo, xhi, ylo, yhi) * (cal.img_width / cal.img_height)
+    return (
+        xlims = (xlo, xhi),
+        ylims = (ylo, yhi),
+        aspect_ratio = ar,
+        xscale = cal.x_log ? :log10 : :identity,
+        yscale = cal.y_log ? :log10 : :identity,
+        widen = false,
+    )
+end

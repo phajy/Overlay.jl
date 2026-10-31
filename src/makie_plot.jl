@@ -1,20 +1,3 @@
-function _extent_lo_hi(cal, is_x::Bool)
-    r = is_x ? cal.x_scale : cal.y_scale
-    logf = is_x ? cal.x_log : cal.y_log
-    lo = logf ? exp10(float(first(r))) : float(first(r))
-    hi = logf ? exp10(float(last(r))) : float(last(r))
-    lo, hi = minmax(lo, hi)
-    if logf
-        # log axes require strictly positive limits; exp10 can underflow to 0.0
-        lo = max(lo, nextfloat(0.0))
-        hi = max(hi, nextfloat(0.0))
-        if hi <= lo
-            hi = lo * 10
-        end
-    end
-    return lo, hi
-end
-
 function _format_marker_coord(x::Float64)
     ax = abs(x)
     if isnan(x) || isinf(x)
