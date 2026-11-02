@@ -35,7 +35,7 @@ jobs:
       DISPLAY: ':99'
       LIBGL_ALWAYS_SOFTWARE: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Xvfb / software OpenGL
         run: |
           sudo apt-get update
